@@ -1,46 +1,45 @@
-use crate::constants::*;
+use crate::constants::GUILD;
 use crate::discord::*;
-use serenity::all::{CacheHttp, Context, GuildMemberUpdateEvent, Member, RoleId};
+use crate::functions::global_boost;
+use std::error::Error;
+use twilight_gateway::{Event, EventType};
+use twilight_model::id::marker::{ChannelMarker, RoleMarker};
+use twilight_model::id::Id;
 
-pub async fn run(
-    ctx: &Context,
-    old_if_available: &Option<Member>,
-    new: &Option<Member>,
-    event: &GuildMemberUpdateEvent,
-) {
-    let old_was_premium = {
-        if let Some(old) = old_if_available {
-            old.premium_since.is_some()
+pub struct MemberUpdate;
+
+#[async_trait]
+impl EventHandler for MemberUpdate {
+    fn event(&self) -> EventType {
+        EventType::MemberUpdate
+    }
+
+    async fn run(&self, ctx: Context, event: Event) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let member_update = match event {
+            Event::MemberUpdate(e) => e,
+            _ => return Ok(()),
+        };
+
+        let guild_id = &member_update.guild_id;
+        let user_id = &member_update.user.id;
+        let channel_id = Id::<ChannelMarker>::new(GUILD.channels.announcement);
+
+        if member_update.user.bot {
+            return Ok(());
+        }
+
+        let booster_role = Id::<RoleMarker>::new(GUILD.roles.boosters);
+        if member_update.premium_since.is_some() {
+            ctx.http
+                .add_guild_member_role(guild_id.clone(), user_id.clone(), booster_role)
+                .await?;
+            global_boost(&ctx, &member_update.user, &channel_id).await;
         } else {
-            false
-        }
-    };
-    let new_was_premium = {
-        if let Some(new_member) = new {
-            new_member.premium_since.is_some()
-        } else {
-            false
-        }
-    };
-
-    let member = new.as_ref().unwrap().clone();
-    let role_id = RoleId::new(GUILD.roles.boosters);
-    if !old_was_premium && new_was_premium {
-        if let Err(err) = member
-            .add_role(ctx.http(), role_id, Some("Became a booster!"))
-            .await
-        {
-            error(&format!("Failed to set member role!\n└ {:?}", err));
-            return;
+            ctx.http
+                .remove_guild_member_role(guild_id.clone(), user_id.clone(), booster_role)
+                .await?;
         }
 
-        global_boost(ctx, &event.user, &event.guild_id).await;
-    } else {
-        if let Err(err) = member
-            .remove_role(ctx.http(), role_id, Some("Boost is over!"))
-            .await
-        {
-            error(&format!("Failed to remove member role!\n└ {:?}", err));
-        }
+        Ok(())
     }
 }

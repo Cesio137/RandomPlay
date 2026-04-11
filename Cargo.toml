@@ -1,39 +1,36 @@
 [package]
-name = "Bangboo"
-version = "0.4.8"
+name = "bot"
+version = "0.0.1"
 edition = "2024"
 
-[profile.release]
-opt-level = 0
-debug = false
-split-debuginfo = "packed"
-strip = "none"
-debug-assertions = false
-overflow-checks = false
-lto = "thin"
-panic = 'unwind'
-incremental = false
-codegen-units = 1
-rpath = false
+[[bin]]
+name = "Bangboo"
+path = "src/main.rs"
 
 [dependencies]
-serenity = { git = "https://github.com/serenity-rs/serenity.git", branch = "next", features = ["collector", "model"] }
+twilight-cache-inmemory = { version = "0.17" }
+twilight-gateway = { version = "0.17" }
+twilight-http = { version = "0.17" }
+twilight-http-ratelimiting = { version = "0.17" }
+twilight-model = { version = "0.17" }
+twilight-standby = { version = "0.17" }
+twilight-mention = { version = "0.17" }
+twilight-util = { version = "0.17", features = ["builder", "snowflake"] }
+twilight-gateway-queue = { version = "0.17" }
 async-trait = { version = "0.1" }
-anyhow = { version = "1.0" }
 colored = { version = "3" }
 config = { version = "0.15" }
 discloud-rs = { git = "https://github.com/Cesio137/discloud-rs.git", branch = "dev" }
 dotenvy = { version = "0.15" }
-genai = { version = "0.4" }
-glob = { version = "0.3" }
-image = { version = "0.25" }
-imghash = { version = "1.5" }
+genai = { version = "0.5" }
+# glob = { version = "0.3" }
 once_cell = { version = "1.21" }
 regex = { version = "1.12" }
-reqwest = { version = "0.12" }
-ron = { version = "0.11" }
-serde = { version = "1.0" }
+reqwest = { version = "0.13" }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
-skia-safe = { version = "0.90", features = ["textlayout", "gl"] }
-tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "signal"] }
+skia-safe = { version = "0.93", features = ["textlayout", "gl"] }
+tokio = { version = "1.50", features = ["macros", "rt-multi-thread", "signal"] }
+tokio-utils = { version = "0.1" }
 chrono = { version = "0.4" }
+# log = "0.4.28"

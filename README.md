@@ -15,10 +15,9 @@ This project is currently for my personal use, but I hope to monetize it in the 
 - [Rust](https://www.rust-lang.org/)
 
 - Windows only
-    - Build With Visual Studio 2022
+    - Build With Visual Studio 2026
         - [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/)
         - 👇 Install the following workloads:
-        - Game Development with C++
         - MSVC v142 or above | x64/x86
         - C++ 2015/2022 redistributable update
 
@@ -37,7 +36,7 @@ This project is currently for my personal use, but I hope to monetize it in the 
 
 ## Thirdparty Libraries
 
-- [Serenity](https://crates.io/crates/serenity)
+- [Twilight-rs](https://crates.io/crates/twilight)
 - [Skia Safe](https://crates.io/crates/skia-safe)
 
 ## Special Mentions

@@ -1,13 +1,20 @@
-pub fn display_avatar_url(user_id: u64, hash: &str, size: u16) -> String {
+use twilight_model::user::User;
+
+pub fn display_avatar_url(user: &User, size: u16) -> Option<String> {
+    let id = &user.id.get();
+    let Some(hash) = user.avatar else {
+        return None;
+    };
+    let image_hash = hash.to_string();
     if size == 0 {
-        format!(
+        Some(format!(
             "https://cdn.discordapp.com/avatars/{}/{}.png",
-            user_id, hash
-        )
+            id, image_hash
+        ))
     } else {
-        format!(
+        Some(format!(
             "https://cdn.discordapp.com/avatars/{}/{}.png?size={}",
-            user_id, hash, size
-        )
+            id, image_hash, size
+        ))
     }
 }

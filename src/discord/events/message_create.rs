@@ -1,16 +1,37 @@
-use crate::discord::*;
-use crate::tools::*;
-use serenity::all::{Context, Message};
+use crate::{discord::*, tools::mousetrap};
+use std::error::Error;
+use twilight_gateway::{Event, EventType};
+pub struct MessageCreate;
 
-pub async fn run(app: &App, ctx: &Context, message: &Message) {
-    if message.author.bot() && message.guild_id.is_none() {
-        return;
+#[async_trait]
+impl EventHandler for MessageCreate {
+    fn event(&self) -> EventType {
+        EventType::MessageCreate
     }
 
-    filter_attachment(ctx, message).await;
-    /*
-    if let Some(callback) = app.prefix_command_handlers.get(message.content.as_str()) {
-        callback.run(app, ctx, message).await;
+    async fn run(&self, ctx: Context, event: Event) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let message = match event {
+            Event::MessageCreate(e) => e,
+            _ => return Ok(()),
+        };
+
+        if let Some(member) = &message.member {
+            if let Some(user) = &member.user {
+                if user.bot {
+                    return Ok(());
+                }
+            }
+        }
+
+        mousetrap(&ctx, &message).await;
+
+        if let Some(callback) = HANDLERS
+            .prefix_command_handlers
+            .get(message.content.as_str())
+        {
+            callback.run(ctx, message).await?;
+        }
+
+        Ok(())
     }
-    */
 }

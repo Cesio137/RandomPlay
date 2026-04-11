@@ -1,76 +1,105 @@
-use crate::constants::*;
-use serenity::all::{
-    Colour, CreateActionRow, CreateButton, CreateComponent, CreateContainer, CreateSeparator,
-    CreateTextDisplay, EmojiId, ReactionType, Spacing,
+use crate::constants::{COLORS, EMOJIS};
+use twilight_model::channel::message::component::{ButtonStyle, SeparatorSpacingSize};
+use twilight_model::channel::message::{Component, EmojiReactionType};
+use twilight_model::id::marker::EmojiMarker;
+use twilight_model::id::Id;
+use twilight_util::builder::message::{
+    ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
 };
-use std::borrow::Cow;
 
-pub fn social_component<'a>() -> CreateComponent<'a> {
-    let accent_color = Colour::new(COLORS.green);
-    let text_display = CreateTextDisplay::new("**FOLLOW ME ON SOCIAL MEDIA**");
-    let separator = CreateSeparator::new(false).spacing(Spacing::Small);
+pub fn social_component() -> Component {
+    let text_display = TextDisplayBuilder::new("## FOLLOW ME ON SOCIAL MEDIA").build();
+    let separator = SeparatorBuilder::new()
+        .spacing(SeparatorSpacingSize::Small)
+        .build();
+    let social_row = ActionRowBuilder::new()
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Link)
+                .label("Portifolio")
+                .emoji(EmojiReactionType::Custom {
+                    id: Id::<EmojiMarker>::new(EMOJIS.emojis_static.icons_p),
+                    name: None,
+                    animated: false,
+                })
+                .url("https://nathan-miguel.vercel.app/")
+                .build(),
+        ))
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Link)
+                .label("Youtube")
+                .emoji(EmojiReactionType::Custom {
+                    id: Id::<EmojiMarker>::new(EMOJIS.emojis_static.icons_youtube),
+                    name: None,
+                    animated: false,
+                })
+                .url("https://www.youtube.com/@NathanMiguel1")
+                .build(),
+        ))
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Link)
+                .label("Instagram")
+                .emoji(EmojiReactionType::Custom {
+                    id: Id::<EmojiMarker>::new(EMOJIS.emojis_static.icons_instagram),
+                    name: None,
+                    animated: false,
+                })
+                .url("https://www.instagram.com/nathan_cmiguel/")
+                .build(),
+        ))
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Link)
+                .label("Github")
+                .emoji(EmojiReactionType::Custom {
+                    id: Id::<EmojiMarker>::new(EMOJIS.emojis_static.icons_github),
+                    name: None,
+                    animated: false,
+                })
+                .url("https://github.com/nathancmiguel")
+                .build(),
+        ))
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Link)
+                .label("X/Twitter")
+                .emoji(EmojiReactionType::Custom {
+                    id: Id::<EmojiMarker>::new(EMOJIS.emojis_static.icons_x),
+                    name: None,
+                    animated: false,
+                })
+                .url("https://x.com/nathancmig")
+                .build(),
+        ))
+        .build();
 
-    let social_row = CreateActionRow::Buttons(Cow::Owned(vec![
-        CreateButton::new_link("https://nathan-miguel.vercel.app/")
-            .label("Portifolio")
-            .emoji(ReactionType::Custom {
-                id: EmojiId::from(EMOJIS.emojis_static.icons_p),
-                name: None,
-                animated: false,
-            }),
-        CreateButton::new_link("https://www.youtube.com/@NathanMiguel1")
-            .label("Youtube")
-            .emoji(ReactionType::Custom {
-                id: EmojiId::from(EMOJIS.emojis_static.icons_youtube),
-                name: None,
-                animated: false,
-            }),
-        CreateButton::new_link("https://www.instagram.com/nathan_cmiguel/")
-            .label("Instagram")
-            .emoji(ReactionType::Custom {
-                id: EmojiId::from(EMOJIS.emojis_static.icons_instagram),
-                name: None,
-                animated: false,
-            }),
-        CreateButton::new_link("https://github.com/Cesio137")
-            .label("GitHub")
-            .emoji(ReactionType::Custom {
-                id: EmojiId::from(EMOJIS.emojis_static.icons_github),
-                name: None,
-                animated: false,
-            }),
-        CreateButton::new_link("https://x.com/NathanCmig")
-            .label("X/Twitter")
-            .emoji(ReactionType::Custom {
-                id: EmojiId::from(EMOJIS.emojis_static.icons_x),
-                name: None,
-                animated: false,
-            }),
-    ]));
+    let fab_separator = SeparatorBuilder::new()
+        .spacing(SeparatorSpacingSize::Large)
+        .divider(true)
+        .build();
 
-    let fab_separator = CreateSeparator::new(true).spacing(Spacing::Large);
-    let fab_text_display = CreateTextDisplay::new("**VISIT MY FAB STORE**");
+    let fab_text_display = TextDisplayBuilder::new("## VISIT MY FAB STORE").build();
 
-    let fab_row = CreateActionRow::Buttons(Cow::Owned(vec![
-        CreateButton::new_link("https://www.fab.com/sellers/Nathan%20Miguel")
-            .label("Fab")
-            .emoji(ReactionType::Custom {
-                id: EmojiId::from(EMOJIS.emojis_static.icons_f),
-                name: None,
-                animated: false,
-            }),
-    ]));
+    let fab_row = ActionRowBuilder::new()
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Link)
+                .label("Fab")
+                .emoji(EmojiReactionType::Custom {
+                    id: Id::<EmojiMarker>::new(EMOJIS.emojis_static.icons_f),
+                    name: None,
+                    animated: false,
+                })
+                .url("https://www.fab.com/sellers/Nathan%20Miguel")
+                .build(),
+        ))
+        .build();
 
-    CreateComponent::Container(
-        CreateContainer::new(vec![
-            CreateComponent::TextDisplay(text_display),
-            CreateComponent::Separator(separator.clone()),
-            CreateComponent::ActionRow(social_row),
-            CreateComponent::Separator(fab_separator.clone()),
-            CreateComponent::TextDisplay(fab_text_display),
-            CreateComponent::Separator(fab_separator.divider(false).spacing(Spacing::Small)),
-            CreateComponent::ActionRow(fab_row),
-        ])
-        .accent_color(accent_color),
+    Component::Container(
+        ContainerBuilder::new()
+            .accent_color(Some(COLORS.green))
+            .component(Component::TextDisplay(text_display))
+            .component(Component::Separator(separator))
+            .component(Component::ActionRow(social_row))
+            .component(Component::Separator(fab_separator))
+            .component(Component::TextDisplay(fab_text_display))
+            .component(Component::ActionRow(fab_row))
+            .build(),
     )
 }

@@ -1,52 +1,60 @@
 use crate::constants::*;
-use serenity::all::{
-    ButtonStyle, Colour, CreateActionRow, CreateButton, CreateComponent, CreateContainer,
-    CreateSeparator, CreateTextDisplay, Spacing,
+use twilight_model::channel::message::component::{ButtonStyle, SeparatorSpacingSize};
+use twilight_model::channel::message::Component;
+use twilight_util::builder::message::{
+    ActionRowBuilder, ButtonBuilder, ContainerBuilder, SeparatorBuilder, TextDisplayBuilder,
 };
-use std::borrow::Cow;
 
-pub fn status_component<'a>(infos: Vec<String>) -> CreateComponent<'a> {
-    let accent_color = Colour::new(COLORS.green);
-    let text_display = CreateTextDisplay::new("### BANGBOO'S STATUS");
-    let separator = CreateSeparator::new(true).spacing(Spacing::Large);
-    let info_display = CreateTextDisplay::new(infos.join("\n"));
-    let refresh_row = CreateActionRow::Buttons(Cow::Owned(vec![
-        CreateButton::new("discloud/status/refresh")
-            .label("Refresh")
-            .style(ButtonStyle::Success),
-    ]));
+pub fn status_component(infos: Vec<String>) -> Component {
+    let text_display = TextDisplayBuilder::new("### BANGBOO'S STATUS").build();
+    let separator = SeparatorBuilder::new()
+        .spacing(SeparatorSpacingSize::Large)
+        .build();
+    let info_display = TextDisplayBuilder::new(infos.join("\n")).build();
+    let refresh_row = ActionRowBuilder::new()
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Success)
+                .label("Refresh")
+                .custom_id("discloud/status/refresh")
+                .build(),
+        ))
+        .build();
 
-    CreateComponent::Container(
-        CreateContainer::new(vec![
-            CreateComponent::TextDisplay(text_display),
-            CreateComponent::Separator(separator.clone()),
-            CreateComponent::TextDisplay(info_display),
-            CreateComponent::Separator(separator),
-            CreateComponent::ActionRow(refresh_row),
-        ])
-        .accent_color(accent_color),
+    Component::Container(
+        ContainerBuilder::new()
+            .accent_color(Some(COLORS.green))
+            .component(Component::TextDisplay(text_display))
+            .component(Component::Separator(separator.clone()))
+            .component(Component::TextDisplay(info_display))
+            .component(Component::Separator(separator))
+            .component(Component::ActionRow(refresh_row))
+            .build(),
     )
 }
 
-pub fn logs_component<'a>(logs: &'a str) -> CreateComponent<'a> {
-    let accent_color = Colour::new(COLORS.green);
-    let text_display = CreateTextDisplay::new("### BANGBOO'S LOGS");
-    let separator = CreateSeparator::new(true).spacing(Spacing::Large);
-    let info_display = CreateTextDisplay::new(format!("```bash\n{logs}\n```"));
-    let refresh_row = CreateActionRow::Buttons(Cow::Owned(vec![
-        CreateButton::new("discloud/logs/refresh")
-            .label("Refresh")
-            .style(ButtonStyle::Success),
-    ]));
+pub fn logs_component(logs: &str) -> Component {
+    let text_display = TextDisplayBuilder::new("### BANGBOO'S LOGS").build();
+    let separator = SeparatorBuilder::new()
+        .spacing(SeparatorSpacingSize::Large)
+        .build();
+    let info_display = TextDisplayBuilder::new(format!("```bash\n{logs}\n```")).build();
+    let refresh_row = ActionRowBuilder::new()
+        .component(Component::Button(
+            ButtonBuilder::new(ButtonStyle::Success)
+                .label("Refresh")
+                .custom_id("discloud/logs/refresh")
+                .build(),
+        ))
+        .build();
 
-    CreateComponent::Container(
-        CreateContainer::new(vec![
-            CreateComponent::TextDisplay(text_display),
-            CreateComponent::Separator(separator.clone()),
-            CreateComponent::TextDisplay(info_display),
-            CreateComponent::Separator(separator),
-            CreateComponent::ActionRow(refresh_row),
-        ])
-        .accent_color(accent_color),
+    Component::Container(
+        ContainerBuilder::new()
+            .accent_color(Some(COLORS.green))
+            .component(Component::TextDisplay(text_display))
+            .component(Component::Separator(separator.clone()))
+            .component(Component::TextDisplay(info_display))
+            .component(Component::Separator(separator))
+            .component(Component::ActionRow(refresh_row))
+            .build(),
     )
 }

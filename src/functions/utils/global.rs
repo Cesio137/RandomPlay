@@ -1,23 +1,22 @@
 use crate::constants::*;
-use crate::discord::*;
+use crate::discord::Context;
 use crate::functions::*;
-use serenity::all::{
-    CacheHttp, ChannelId, Colour, Context, CreateAttachment, CreateEmbed, CreateEmbedAuthor,
-    CreateMessage, GuildId, Member, User,
-};
+use chrono::Utc;
 use skia_safe::{EncodedImageFormat, ISize, Point};
+use twilight_model::util::Timestamp;
 use std::time::{SystemTime, UNIX_EPOCH};
-
-#[derive(Eq, PartialEq)]
-pub enum EventType {
-    MemberAdded,
-    MemberRemoved,
-    BanAdded,
-}
+use twilight_gateway::EventType;
+use twilight_model::guild::Member;
+use twilight_model::http::attachment::Attachment;
+use twilight_model::id::marker::ChannelMarker;
+use twilight_model::id::Id;
+use twilight_model::user::User;
+use twilight_util::builder::embed::{EmbedAuthorBuilder, EmbedBuilder, ImageSource};
+use twilight_util::snowflake::Snowflake;
 
 pub async fn global_message(
     ctx: &Context,
-    channel_id: &ChannelId,
+    channel_id: &Id<ChannelMarker>,
     event: EventType,
     member: Option<&Member>,
     user: &User,
@@ -25,8 +24,7 @@ pub async fn global_message(
     // Fetch avatar
     let mut user_avatar: Vec<u8> = vec![];
 
-    if let Some(avatar_hash) = user.avatar {
-        let avatar_url = display_avatar_url(user.id.get(), &avatar_hash.to_string(), 512);
+    if let Some(avatar_url) = display_avatar_url(&user, 512) {
         if let Ok(res) = reqwest::get(avatar_url).await {
             if let Ok(bytes) = res.bytes().await {
                 user_avatar = bytes.to_vec();
@@ -40,27 +38,29 @@ pub async fn global_message(
     }
 
     let background = match event {
-        EventType::MemberAdded => {
+        EventType::MemberAdd => {
+            /*
             let date = match SystemTime::now().duration_since(UNIX_EPOCH) {
                 Ok(duration) => duration.as_millis(),
                 Err(_) => 0,
             };
             let join_age = match member.unwrap().joined_at {
-                Some(joined_at) => date - joined_at.timestamp_millis() as u128,
+                Some(joined_at) => date - (joined_at.as_micros() / 1000) as u128,
                 None => 0,
             };
-            let account_age = date - user.id.created_at().timestamp_millis() as u128;
+            let account_age = date - user.id.timestamp() as u128;
             const TIME_LIMIT: u128 = 300 * 1000;
-            if join_age < TIME_LIMIT {
-                CARD_NEW
-            } else if account_age < TIME_LIMIT {
+            if join_age < TIME_LIMIT || account_age < TIME_LIMIT {
                 CARD_NEW
             } else {
                 CARD_BACK
             }
+            */
+            CARD_NEW
         }
-        EventType::MemberRemoved => CARD_LEFT,
-        EventType::BanAdded => CARD_MOD,
+        EventType::MemberRemove => CARD_LEFT,
+        EventType::BanAdd => CARD_MOD,
+        _ => CARD_LEFT,
     };
 
     let mut data = vec![];
@@ -139,16 +139,36 @@ pub async fn global_message(
     }
 
     let mut utc = String::new();
-    if event == EventType::MemberAdded {
-        let joined_at = member.unwrap().joined_at.unwrap_or_default().timestamp();
+    if event == EventType::MemberAdd {
+        let joined_at = match member.unwrap().joined_at {
+            Some(timestamp) => timestamp.as_secs(),
+            None => 0,
+        };
         utc.push_str(&format!("<t:{}:F>", joined_at));
+    } else {
+        let timeout_until = Utc::now();
+        match Timestamp::from_micros(timeout_until.timestamp_micros()) {
+            Ok(time) => {
+                utc = format!("<t:{}:F>", time.as_secs());
+            },
+            Err(err) => {
+                error(&format!(
+                    "Error trying to parse DataTime to Timestamp\n└ {:?}",
+                    err
+                ));
+            }
+        };
     }
-    let attachment = CreateAttachment::bytes(data, "card.png");
-    let message = CreateMessage::new()
-        .content(utc)
-        .add_files(vec![attachment]);
+    let attachment = Attachment::from_bytes("Card.png".to_string(), data, 0);
 
-    if let Err(err) = channel_id.widen().send_message(ctx.http(), message).await {
+    let res = ctx
+        .http
+        .create_message(channel_id.clone())
+        .attachments(&[attachment])
+        .content(&utc)
+        .await;
+
+    if let Err(err) = res {
         error(&format!(
             "Error trying to send card to system channel\nʟ {:?}",
             err
@@ -156,42 +176,35 @@ pub async fn global_message(
     }
 }
 
-pub async fn global_boost(ctx: &Context, user: &User, guild_id: &GuildId) {
-    let color = Colour::new(COLORS.nitro);
-    let avatar_url = user.avatar_url().unwrap_or_default();
+pub async fn global_boost(ctx: &Context, user: &User, channel_id: &Id<ChannelMarker>) {
+    let avatar_url = display_avatar_url(user, 256).unwrap_or(String::new());
     let username = user.global_name.clone().unwrap_or(user.name.clone());
     let description = format!(
         "**<a:boost:{}> <@${}> became a <@&${}>**\n\n🚀 Thanks for boosting the server!",
         &EMOJIS.animated.boost, user.id, &GUILD.roles.boosters
     );
 
-    let author = CreateEmbedAuthor::new(username.as_str()).icon_url(&avatar_url);
-    let embed = CreateEmbed::new()
-        .color(color)
-        .author(author)
-        .description(description)
-        .thumbnail(&avatar_url);
+    let mut embed = EmbedBuilder::new()
+        .color(COLORS.nitro)
+        .description(description);
 
-    let channel = match guild_id.channels(ctx.http()).await {
-        Ok(channels) => {
-            let id = ChannelId::new(GUILD.channels.announcement);
-            if let Some(channel) = channels.get(&id).cloned() {
-                channel
-            } else {
-                error(&format!("Guild channel not found!"));
-                return;
-            }
-        }
-        Err(err) => {
-            error(&format!("Failed to remove member role!\n└ {:?}", err));
-            return;
-        }
-    };
+    if let Ok(author) = ImageSource::url(&avatar_url) {
+        embed = embed.author(
+            EmbedAuthorBuilder::new(username.as_str())
+                .icon_url(author.clone())
+                .build(),
+        );
+        embed = embed.thumbnail(author);
+    }
 
-    let payload = CreateMessage::new()
-        .content("||@everyone @here||")
-        .embed(embed);
-    if let Err(err) = channel.send_message(ctx.http(), payload).await {
-        error(&format!("Failed to send message!\n└ {:?}", err));
+    let embed = embed.build();
+
+    if let Err(err) = ctx
+        .http
+        .create_message(channel_id.clone())
+        .embeds(&[embed])
+        .await
+    {
+        error(&format!("Failed to send message\n└ {:?}", err));
     }
 }

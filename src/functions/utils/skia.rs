@@ -1,14 +1,14 @@
 use skia_safe::{
-    scalar, surfaces, textlayout::{
+    Canvas, CubicResampler, Data, FilterMode, FontMgr, Image, Paint, PathBuilder, Point, Rect, SamplingOptions, Size, scalar, surfaces, textlayout::{
         FontCollection, ParagraphBuilder, ParagraphStyle, TextStyle, TypefaceFontProvider,
-    }, Canvas, CubicResampler, Data, FilterMode, FontMgr, Image, Paint,
-    Path, Point, Rect, SamplingOptions,
-    Size,
+    }
 };
 
 pub fn draw_circle(canvas: &Canvas, image: Image, x: f32, y: f32, radius: f32) {
-    let mut clip_path = Path::new();
+    let mut clip_path = PathBuilder::new();
     clip_path.add_circle(Point { x, y }, radius, None);
+
+    let clip_path = clip_path.snapshot();
 
     canvas.clip_path(&clip_path, None, true);
     canvas.draw_image(

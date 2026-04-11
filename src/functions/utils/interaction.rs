@@ -1,60 +1,146 @@
-use serenity::all::{
-    CacheHttp, CommandInteraction, Context, CreateAttachment, CreateComponent, CreateEmbed,
-    CreateInteractionResponse, CreateInteractionResponseFollowup, CreateInteractionResponseMessage,
-    EditAttachments, EditInteractionResponse, MessageFlags,
+use std::collections::HashMap;
+
+use crate::discord::Context;
+use crate::functions::*;
+use twilight_model::application::interaction::application_command::CommandData;
+use twilight_model::application::interaction::message_component::MessageComponentInteractionData;
+use twilight_model::application::interaction::modal::{
+    ModalInteractionComponent, ModalInteractionData,
 };
-use crate::discord::*;
+use twilight_model::application::interaction::InteractionData;
+use twilight_model::channel::message::MessageFlags;
+use twilight_model::gateway::payload::incoming::InteractionCreate;
+use twilight_model::http::interaction::{
+    InteractionResponse, InteractionResponseData, InteractionResponseType,
+};
+use twilight_util::builder::embed::EmbedBuilder;
+use twilight_util::builder::InteractionResponseDataBuilder;
 
-#[derive(Debug, Clone)]
-pub struct ReplyPayload<'a> {
-    pub content: Option<&'a str>,
-    pub embeds: Option<Vec<CreateEmbed<'a>>>,
-    pub components: Option<Vec<CreateComponent<'a>>>,
-    pub attachments: Option<Vec<CreateAttachment<'a>>>,
-}
-
-impl<'a> Default for ReplyPayload<'a> {
-    fn default() -> Self {
-        ReplyPayload {
-            content: None,
-            embeds: None,
-            components: None,
-            attachments: None,
+pub fn get_app_command_data(interaction: &Box<InteractionCreate>) -> Option<&Box<CommandData>> {
+    if let Some(data) = &interaction.data {
+        match data {
+            InteractionData::ApplicationCommand(command) => {
+                return Some(command);
+            }
+            _ => {}
         }
     }
+    None
 }
 
-pub async fn reply<'a>(
+pub fn get_modal_data(interaction: &Box<InteractionCreate>) -> Option<&Box<ModalInteractionData>> {
+    if let Some(data) = &interaction.data {
+        match data {
+            InteractionData::ModalSubmit(modal) => {
+                return Some(modal);
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+pub fn get_message_component_data(
+    interaction: &Box<InteractionCreate>,
+) -> Option<&Box<MessageComponentInteractionData>> {
+    if let Some(data) = &interaction.data {
+        match data {
+            InteractionData::MessageComponent(message) => {
+                return Some(message);
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+pub fn modal_labels_to_hash(
+    components: &[ModalInteractionComponent],
+) -> HashMap<String, ModalInteractionComponent> {
+    let mut hashmap: HashMap<String, ModalInteractionComponent> = HashMap::new();
+    for component in components {
+        let mut id = "";
+        let mut modal_component: ModalInteractionComponent = ModalInteractionComponent::Unknown(0);
+        if let ModalInteractionComponent::Label(label) = component {
+            match label.component.as_ref() {
+                ModalInteractionComponent::UserSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::StringSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::ChannelSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::MentionableSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::RoleSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::TextInput(input_text) => {
+                    id = input_text.custom_id.as_str();
+                }
+                _ => {
+                    continue;
+                }
+            }
+            modal_component = label.component.as_ref().clone();
+        } else {
+            match component {
+                ModalInteractionComponent::UserSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::StringSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::ChannelSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::MentionableSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::RoleSelect(select) => {
+                    id = select.custom_id.as_str();
+                }
+                ModalInteractionComponent::TextInput(input_text) => {
+                    id = input_text.custom_id.as_str();
+                }
+                _ => {
+                    continue;
+                }
+            }
+            modal_component = component.clone();
+        }
+        hashmap.insert(id.to_string(), modal_component);
+    }
+    hashmap
+}
+
+pub async fn reply(
     ctx: &Context,
-    interaction: &CommandInteraction,
-    flags: MessageFlags,
-    payload: &'a ReplyPayload<'a>,
+    interaction: &Box<InteractionCreate>,
+    payload: InteractionResponseData,
 ) -> bool {
-    let mut res_message = CreateInteractionResponseMessage::new();
-    res_message = res_message.flags(flags);
+    let response = InteractionResponse {
+        kind: InteractionResponseType::ChannelMessageWithSource,
+        data: Some(payload),
+    };
 
-    if let Some(content) = payload.content {
-        res_message = res_message.content(content);
-    }
-    if let Some(embeds) = &payload.embeds {
-        res_message = res_message.embeds(embeds);
-    }
-    if let Some(components) = &payload.components {
-        res_message = res_message.components(components);
-    }
-    if let Some(attachments) = &payload.attachments {
-        res_message = res_message.add_files(attachments.to_vec())
-    }
-
-    let result = interaction
-        .create_response(ctx.http(), CreateInteractionResponse::Message(res_message))
+    let result = ctx
+        .http
+        .interaction(interaction.application_id)
+        .create_response(interaction.id, &interaction.token, &response)
         .await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
+        let cmd_name = match get_app_command_data(interaction) {
+            Some(cmd) => cmd.name.as_str(),
+            None => "",
+        };
         error(&format!(
-            "Error trying to responde {} command interaction\n└ {:?}",
-            interaction_name, err
+            "Error trying to responde command interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
@@ -62,40 +148,35 @@ pub async fn reply<'a>(
     true
 }
 
-pub async fn update<'a>(
+pub async fn defer_reply(
     ctx: &Context,
-    interaction: &CommandInteraction,
-    flags: MessageFlags,
-    payload: &'a ReplyPayload<'a>,
+    interaction: &Box<InteractionCreate>,
+    ephemeral: bool,
 ) -> bool {
-    let mut res_message = CreateInteractionResponseMessage::new();
-    res_message = res_message.flags(flags);
-
-    if let Some(content) = payload.content {
-        res_message = res_message.content(content);
-    }
-    if let Some(embeds) = &payload.embeds {
-        res_message = res_message.embeds(embeds);
-    }
-    if let Some(components) = &payload.components {
-        res_message = res_message.components(components);
-    }
-    if let Some(attachments) = &payload.attachments {
-        res_message = res_message.add_files(attachments.to_vec())
-    }
-
-    let result = interaction
-        .create_response(
-            ctx.http(),
-            CreateInteractionResponse::UpdateMessage(res_message),
+    let res_data = if ephemeral {
+        Some(
+            InteractionResponseDataBuilder::new()
+                .flags(MessageFlags::EPHEMERAL)
+                .build(),
         )
+    } else {
+        None
+    };
+    let response = InteractionResponse {
+        kind: InteractionResponseType::DeferredChannelMessageWithSource,
+        data: res_data,
+    };
+
+    let result = ctx
+        .http
+        .interaction(interaction.application_id)
+        .create_response(interaction.id, &interaction.token, &response)
         .await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
         error(&format!(
-            "Error trying to responde {} command interaction\n└ {:?}",
-            interaction_name, err
+            "Error trying to defer response to interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
@@ -103,36 +184,44 @@ pub async fn update<'a>(
     true
 }
 
-pub async fn followup<'a>(
+pub async fn update_reply(
     ctx: &Context,
-    interaction: &CommandInteraction,
-    flags: MessageFlags,
-    payload: &'a ReplyPayload<'a>,
+    interaction: &Box<InteractionCreate>,
+    payload: InteractionResponseData,
 ) -> bool {
-    let mut res_followup = CreateInteractionResponseFollowup::new();
-    res_followup = res_followup.flags(flags);
+    let interaction_api = ctx.http.interaction(interaction.application_id);
+    let mut response = interaction_api.update_response(&interaction.token);
 
-    let payload = payload;
-    if let Some(content) = payload.content {
-        res_followup = res_followup.content(content);
-    }
-    if let Some(embeds) = &payload.embeds {
-        res_followup = res_followup.embeds(embeds);
-    }
-    if let Some(components) = &payload.components {
-        res_followup = res_followup.components(components);
-    }
-    if let Some(attachments) = &payload.attachments {
-        res_followup = res_followup.add_files(attachments.to_vec())
+    if let Some(data) = &payload.allowed_mentions {
+        response = response.allowed_mentions(Some(data));
     }
 
-    let result = interaction.create_followup(ctx.http(), res_followup).await;
+    if let Some(data) = &payload.attachments {
+        response = response.attachments(data);
+    }
+
+    if let Some(data) = &payload.components {
+        response = response.components(Some(data));
+    }
+
+    if let Some(data) = &payload.content {
+        response = response.content(Some(data));
+    }
+
+    if let Some(data) = &payload.embeds {
+        response = response.embeds(Some(data));
+    }
+
+    if let Some(data) = &payload.flags {
+        response = response.flags(data.clone());
+    }
+
+    let result = response.await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
         error(&format!(
-            "Error trying to followup {} command interaction\n└ {:?}",
-            interaction_name, err
+            "Error trying to update command interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
@@ -140,40 +229,71 @@ pub async fn followup<'a>(
     true
 }
 
-pub async fn edit<'a>(
-    ctx: &Context,
-    interaction: &CommandInteraction,
-    flags: MessageFlags,
-    payload: &'a ReplyPayload<'a>,
-) -> bool {
-    let mut edit_message = EditInteractionResponse::new();
-    edit_message = edit_message.flags(flags);
+pub async fn defer_update_reply(ctx: &Context, interaction: &Box<InteractionCreate>) -> bool {
+    let response = InteractionResponse {
+        kind: InteractionResponseType::DeferredUpdateMessage,
+        data: None,
+    };
 
-    let payload = payload;
-    if let Some(content) = payload.content {
-        edit_message = edit_message.content(content);
-    }
-    if let Some(embeds) = &payload.embeds {
-        edit_message = edit_message.embeds(embeds);
-    }
-    if let Some(components) = &payload.components {
-        edit_message = edit_message.components(components);
-    }
-    if let Some(attachments) = &payload.attachments {
-        let mut edit_attachments = EditAttachments::new();
-        for attachment in attachments {
-            edit_attachments = edit_attachments.add(attachment.clone());
-        }
-        edit_message = edit_message.attachments(edit_attachments)
-    }
-
-    let result = interaction.edit_response(ctx.http(), edit_message).await;
+    let result = ctx
+        .http
+        .interaction(interaction.application_id)
+        .create_response(interaction.id, &interaction.token, &response)
+        .await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
         error(&format!(
-            "Error trying to followup {} command interaction\n└ {:?}",
-            interaction_name, err
+            "Error trying to defer response to interaction!\n└ {:?}",
+            err
+        ));
+        return false;
+    }
+
+    true
+}
+
+pub async fn followup_reply(
+    ctx: &Context,
+    interaction: &Box<InteractionCreate>,
+    payload: InteractionResponseData,
+) -> bool {
+    let interaction_api = ctx.http.interaction(interaction.application_id);
+    let mut response = interaction_api.create_followup(&interaction.token);
+
+    if let Some(data) = &payload.allowed_mentions {
+        response = response.allowed_mentions(Some(data));
+    }
+
+    if let Some(data) = &payload.attachments {
+        response = response.attachments(data);
+    }
+
+    if let Some(data) = &payload.components {
+        response = response.components(data);
+    }
+
+    if let Some(data) = &payload.content {
+        response = response.content(data);
+    }
+
+    if let Some(data) = &payload.embeds {
+        response = response.embeds(data);
+    }
+
+    if let Some(data) = &payload.flags {
+        response = response.flags(data.clone());
+    }
+
+    let result = response.await;
+
+    if let Err(err) = result {
+        let cmd_name = match get_app_command_data(interaction) {
+            Some(cmd) => cmd.name.as_str(),
+            None => "",
+        };
+        error(&format!(
+            "Error trying to responde command interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
@@ -183,25 +303,36 @@ pub async fn edit<'a>(
 
 pub async fn reply_with_embed(
     ctx: &Context,
-    interaction: &CommandInteraction,
+    interaction: &Box<InteractionCreate>,
     flags: MessageFlags,
     color: u32,
     content: &str,
 ) -> bool {
-    let embed = CreateEmbed::new().color(color).description(content);
+    let embed = EmbedBuilder::new()
+        .color(color)
+        .description(content)
+        .build();
 
-    let res_message = CreateInteractionResponseMessage::new()
-        .embed(embed)
-        .flags(flags);
-    let result = interaction
-        .create_response(ctx.http(), CreateInteractionResponse::Message(res_message))
+    let res_message = InteractionResponseDataBuilder::new()
+        .embeds(vec![embed])
+        .flags(flags)
+        .build();
+
+    let response = InteractionResponse {
+        kind: InteractionResponseType::ChannelMessageWithSource,
+        data: Some(res_message),
+    };
+
+    let result = ctx
+        .http
+        .interaction(interaction.application_id)
+        .create_response(interaction.id, &interaction.token, &response)
         .await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
         error(&format!(
-            "Error trying to responde \"{}\" command interaction!\n└ {:?}",
-            interaction_name, err
+            "Error trying to responde command interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
@@ -211,29 +342,28 @@ pub async fn reply_with_embed(
 
 pub async fn update_with_embed(
     ctx: &Context,
-    interaction: &CommandInteraction,
+    interaction: &Box<InteractionCreate>,
     flags: MessageFlags,
     color: u32,
     content: &str,
 ) -> bool {
-    let embed = CreateEmbed::new().color(color).description(content);
+    let embed = EmbedBuilder::new()
+        .color(color)
+        .description(content)
+        .build();
 
-    let res_message = CreateInteractionResponseMessage::new()
-        .embed(embed)
-        .flags(flags);
-
-    let result = interaction
-        .create_response(
-            ctx.http(),
-            CreateInteractionResponse::UpdateMessage(res_message),
-        )
+    let result = ctx
+        .http
+        .interaction(interaction.application_id)
+        .update_response(&interaction.token)
+        .embeds(Some(&[embed]))
+        .flags(flags)
         .await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
         error(&format!(
-            "Error trying to responde \"{}\" command interaction!\n└ {:?}",
-            interaction_name, err
+            "Error trying to responde command interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
@@ -243,24 +373,32 @@ pub async fn update_with_embed(
 
 pub async fn followup_with_embed(
     ctx: &Context,
-    interaction: &CommandInteraction,
+    interaction: &Box<InteractionCreate>,
     flags: MessageFlags,
     color: u32,
     content: &str,
 ) -> bool {
-    let embed = CreateEmbed::new().color(color).description(content);
+    let embed = EmbedBuilder::new()
+        .color(color)
+        .description(content)
+        .build();
 
-    let res_followup = CreateInteractionResponseFollowup::new()
-        .embed(embed)
-        .flags(flags);
-
-    let result = interaction.create_followup(ctx.http(), res_followup).await;
+    let result = ctx
+        .http
+        .interaction(interaction.application_id)
+        .create_followup(&interaction.token)
+        .embeds(&[embed])
+        .flags(flags)
+        .await;
 
     if let Err(err) = result {
-        let interaction_name = &interaction.data.name;
+        let cmd_name = match get_app_command_data(interaction) {
+            Some(cmd) => cmd.name.as_str(),
+            None => "",
+        };
         error(&format!(
-            "Error trying to followup \"{}\" command interaction!\n└ {:?}",
-            interaction_name, err
+            "Error trying to responde command interaction!\n└ {:?}",
+            err
         ));
         return false;
     }
