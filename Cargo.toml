@@ -1,6 +1,6 @@
 [package]
 name = "bot"
-version = "0.0.1"
+version = "1.0.0"
 edition = "2024"
 
 [[bin]]
@@ -22,14 +22,14 @@ colored = { version = "3" }
 config = { version = "0.15" }
 discloud-rs = { git = "https://github.com/Cesio137/discloud-rs.git", branch = "dev" }
 dotenvy = { version = "0.15" }
-genai = { version = "0.5" }
+genai = { version = "0.6" }
 # glob = { version = "0.3" }
 once_cell = { version = "1.21" }
 regex = { version = "1.12" }
 reqwest = { version = "0.13" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
-skia-safe = { version = "0.93", features = ["textlayout", "gl"] }
+skia-safe = { version = "0.97", features = ["textlayout", "gl"] }
 tokio = { version = "1.50", features = ["macros", "rt-multi-thread", "signal"] }
 tokio-utils = { version = "0.1" }
 chrono = { version = "0.4" }
