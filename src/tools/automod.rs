@@ -56,7 +56,7 @@ pub async fn mousetrap(ctx: &Context, message: &Message) {
 
     if let Err(err) = ctx.http
         .create_ban(guild_id.clone(), id)
-        .delete_message_seconds(604_800)
+        .delete_message_seconds(603_800)
         .reason(reason)
         .await {
         error(&format!("Failed to ban user\n└ {:?}", err));

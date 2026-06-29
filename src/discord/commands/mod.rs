@@ -22,7 +22,7 @@ pub fn slash_commands() -> Vec<Box<dyn SlashCommandHandler + Send + Sync>> {
             Box::new(discloud::Discloud),
             Box::new(fab::Fab),
             Box::new(moderate::Moderate),
-            Box::new(prompt::Prompt),
+            //Box::new(prompt::Prompt),
             Box::new(social::Social),
         ];
 
