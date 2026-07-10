@@ -25,7 +25,7 @@ dotenvy = { version = "0.15" }
 genai = { version = "0.6" }
 # glob = { version = "0.3" }
 once_cell = { version = "1.21" }
-regex = { version = "1.12" }
+regex = { version = "1.13" }
 reqwest = { version = "0.13" }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }

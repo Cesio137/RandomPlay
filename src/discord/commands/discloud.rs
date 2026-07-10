@@ -26,6 +26,7 @@ impl SlashCommandHandler for Discloud {
         let str_opt = CommandOption::from(
             StringBuilder::new("fetch", "Select info to fetch")
                 .choices(vec![("status", "status"), ("logs", "logs")])
+                .required(true)
                 .build(),
         );
         CommandBuilder::new(
