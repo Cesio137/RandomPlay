@@ -62,7 +62,8 @@ pub fn draw_text_with_font(
 ) -> bool {
     let mut font_provider = TypefaceFontProvider::new();
     let font_mrg = FontMgr::new();
-    let typeface = match font_mrg.new_from_data(font, None) {
+    let font_data = skia_safe::Data::new_copy(font);
+    let typeface = match font_mrg.new_from_data(font_data, None) {
         Some(typeface) => typeface,
         None => return false,
     };
